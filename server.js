@@ -56,10 +56,6 @@ app.get('/neo4j-test', async (req, res) => {
   }
 });
 
-/*
-Endpoint parola
-Esempio: /word/abbraccio
-*/
 app.get('/word/:lemma', async (req, res) => {
   const session = driver.session({
     database: DATABASE
@@ -83,23 +79,38 @@ app.get('/word/:lemma', async (req, res) => {
       });
     }
 
-    const record = wordResult.records[0];
-    const w = record.get('w');
-    const labels = record.get('labels');
+    const wordRecord = wordResult.records[0];
+    const w = wordRecord.get('w');
+    const labels = wordRecord.get('labels');
 
-    const relationsResult = await session.run(
+    const outgoingResult = await session.run(
       `
       MATCH (w:Word {Lemma: $lemma})-[r]->(x:Word)
-      WHERE type(r) IN ["GENERIC_ASSOCIATION", "QUALIFIED_ASSOCIATION", "SYNONYM_OF"]
+      WHERE type(r) IN ["GENERIC_ASSOCIATION", "QUALIFIED_ASSOCIATION"]
       RETURN type(r) AS relation, x.Lemma AS target
       ORDER BY relation, target
       `,
       { lemma }
     );
 
-    const relations = relationsResult.records.map((r) => ({
+    const incomingResult = await session.run(
+      `
+      MATCH (x:Word)-[r]->(w:Word {Lemma: $lemma})
+      WHERE type(r) IN ["GENERIC_ASSOCIATION", "QUALIFIED_ASSOCIATION"]
+      RETURN type(r) AS relation, x.Lemma AS source
+      ORDER BY relation, source
+      `,
+      { lemma }
+    );
+
+    const outgoing = outgoingResult.records.map((r) => ({
       type: r.get('relation'),
       target: r.get('target')
+    }));
+
+    const incoming = incomingResult.records.map((r) => ({
+      type: r.get('relation'),
+      source: r.get('source')
     }));
 
     res.json({
@@ -112,7 +123,8 @@ app.get('/word/:lemma', async (req, res) => {
         hasScheda: w.properties.hasScheda || null,
         labels: labels
       },
-      relations: relations
+      outgoing: outgoing,
+      incoming: incoming
     });
 
   } catch (error) {
