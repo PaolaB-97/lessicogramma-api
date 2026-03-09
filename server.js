@@ -103,16 +103,6 @@ app.get('/word/:lemma', async (req, res) => {
       { lemma }
     );
 
-    const outgoing = outgoingResult.records.map((r) => ({
-      type: r.get('relation'),
-      target: r.get('target')
-    }));
-
-    const incoming = incomingResult.records.map((r) => ({
-      type: r.get('relation'),
-      source: r.get('source')
-    }));
-
     res.json({
       status: "ok",
       word: {
@@ -123,8 +113,14 @@ app.get('/word/:lemma', async (req, res) => {
         hasScheda: w.properties.hasScheda || null,
         labels: labels
       },
-      outgoing: outgoing,
-      incoming: incoming
+      outgoing: outgoingResult.records.map((r) => ({
+        type: r.get('relation'),
+        target: r.get('target')
+      })),
+      incoming: incomingResult.records.map((r) => ({
+        type: r.get('relation'),
+        source: r.get('source')
+      }))
     });
 
   } catch (error) {
@@ -181,21 +177,73 @@ app.get('/filter/:name', async (req, res) => {
       { filterName }
     );
 
-    const subfilters = subfiltersResult.records.map((r) => r.get('subfilter'));
-
-    const words = wordsResult.records.map((r) => ({
-      lemma: r.get('lemma'),
-      labels: r.get('labels')
-    }));
-
     res.json({
       status: "ok",
       filter: {
         name: filterRecord.get('filterName'),
         macrofilter: filterRecord.get('macrofilterName')
       },
-      subfilters: subfilters,
-      words: words
+      subfilters: subfiltersResult.records.map((r) => r.get('subfilter')),
+      words: wordsResult.records.map((r) => ({
+        lemma: r.get('lemma'),
+        labels: r.get('labels')
+      }))
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      error: error.message
+    });
+  } finally {
+    await session.close();
+  }
+});
+
+app.get('/subfilter/:name', async (req, res) => {
+  const session = driver.session({
+    database: DATABASE
+  });
+
+  const subfilterName = req.params.name;
+
+  try {
+    const subfilterResult = await session.run(
+      `
+      MATCH (s:Subfilter {name: $subfilterName})-[:IN_FILTER]->(f:Filter)
+      RETURN s.name AS subfilterName, f.name AS filterName
+      `,
+      { subfilterName }
+    );
+
+    if (subfilterResult.records.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Subfilter non trovato"
+      });
+    }
+
+    const subfilterRecord = subfilterResult.records[0];
+
+    const wordsResult = await session.run(
+      `
+      MATCH (w:Word)-[:IN_SUBFILTER]->(s:Subfilter {name: $subfilterName})
+      RETURN w.Lemma AS lemma, labels(w) AS labels
+      ORDER BY w.Lemma
+      `,
+      { subfilterName }
+    );
+
+    res.json({
+      status: "ok",
+      subfilter: {
+        name: subfilterRecord.get('subfilterName'),
+        filter: subfilterRecord.get('filterName')
+      },
+      words: wordsResult.records.map((r) => ({
+        lemma: r.get('lemma'),
+        labels: r.get('labels')
+      }))
     });
 
   } catch (error) {
