@@ -1,7 +1,15 @@
 const express = require('express');
-const app = express();
+const neo4j = require('neo4j-driver');
 
+const app = express();
 const PORT = process.env.PORT || 10000;
+
+// connessione Neo4j
+const URI = 'neo4j+s://5b7f3b90.databases.neo4j.io';
+const USER = 'neo4j';
+const PASSWORD = 'Corrispondenze1997';
+
+const driver = neo4j.driver(URI, neo4j.auth.basic(USER, PASSWORD));
 
 app.get('/', (req, res) => {
   res.json({
@@ -9,11 +17,34 @@ app.get('/', (req, res) => {
   });
 });
 
-app.get('/test', (req, res) => {
-  res.json({
-    status: "ok",
-    message: "endpoint test funzionante"
-  });
+app.get('/neo4j-test', async (req, res) => {
+
+  const session = driver.session();
+
+  try {
+
+    const result = await session.run(
+      'RETURN "Neo4j connesso!" AS message'
+    );
+
+    res.json({
+      status: "ok",
+      message: result.records[0].get('message')
+    });
+
+  } catch (error) {
+
+    res.json({
+      status: "errore",
+      error: error.message
+    });
+
+  } finally {
+
+    await session.close();
+
+  }
+
 });
 
 app.listen(PORT, () => {
