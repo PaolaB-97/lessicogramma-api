@@ -1,0 +1,12 @@
+{
+  "name": "lessicogramma-api",
+  "version": "1.0.0",
+  "description": "API ponte tra WordPress e Neo4j",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
