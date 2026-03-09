@@ -6,8 +6,9 @@ const PORT = process.env.PORT || 10000;
 
 // connessione Neo4j
 const URI = 'neo4j+s://5b7f3b90.databases.neo4j.io';
-const USER = 'neo4j';
-const PASSWORD = 'Corrispondenze1997';
+const USER = '5b7f3b90';
+const PASSWORD = 'SnsSAAgo3GOusV_qoV-HhyGExSe4NEjI2RRa9shPuAg
+';
 
 const driver = neo4j.driver(URI, neo4j.auth.basic(USER, PASSWORD));
 
