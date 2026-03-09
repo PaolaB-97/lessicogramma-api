@@ -137,6 +137,77 @@ app.get('/word/:lemma', async (req, res) => {
   }
 });
 
+app.get('/filter/:name', async (req, res) => {
+  const session = driver.session({
+    database: DATABASE
+  });
+
+  const filterName = req.params.name;
+
+  try {
+    const filterResult = await session.run(
+      `
+      MATCH (f:Filter {name: $filterName})
+      OPTIONAL MATCH (f)-[:IN_MACROFILTER]->(m:MacroFilter)
+      RETURN f.name AS filterName, m.name AS macrofilterName
+      `,
+      { filterName }
+    );
+
+    if (filterResult.records.length === 0) {
+      return res.status(404).json({
+        status: "error",
+        message: "Filtro non trovato"
+      });
+    }
+
+    const filterRecord = filterResult.records[0];
+
+    const subfiltersResult = await session.run(
+      `
+      MATCH (s:Subfilter)-[:IN_FILTER]->(f:Filter {name: $filterName})
+      RETURN s.name AS subfilter
+      ORDER BY s.name
+      `,
+      { filterName }
+    );
+
+    const wordsResult = await session.run(
+      `
+      MATCH (w:Word)-[:IN_FILTER]->(f:Filter {name: $filterName})
+      RETURN w.Lemma AS lemma, labels(w) AS labels
+      ORDER BY w.Lemma
+      `,
+      { filterName }
+    );
+
+    const subfilters = subfiltersResult.records.map((r) => r.get('subfilter'));
+
+    const words = wordsResult.records.map((r) => ({
+      lemma: r.get('lemma'),
+      labels: r.get('labels')
+    }));
+
+    res.json({
+      status: "ok",
+      filter: {
+        name: filterRecord.get('filterName'),
+        macrofilter: filterRecord.get('macrofilterName')
+      },
+      subfilters: subfilters,
+      words: words
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      error: error.message
+    });
+  } finally {
+    await session.close();
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
