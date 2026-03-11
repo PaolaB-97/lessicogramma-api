@@ -110,17 +110,28 @@ app.get('/word/:lemma', async (req, res) => {
         displayName: w.properties.displayName || null,
         frasi: w.properties.Frasi || null,
         notes: w.properties.notes || null,
-        hasScheda: w.properties.hasScheda || null,
-        labels: labels
-      },
-      outgoing: outgoingResult.records.map((r) => ({
-        type: r.get('relation'),
-        target: r.get('target')
-      })),
-      incoming: incomingResult.records.map((r) => ({
-        type: r.get('relation'),
-        source: r.get('source')
-      }))
+        repeatCount: w.properties.repeatCount || null,
+        macrofilter: w.properties.Macrofilter || null,
+        filterPath: w.properties.FilterPath || null,
+        genericMutation: w.properties.genericMutation || null,
+        relationMutation: w.properties.relationMutation || null,
+        alterationMutation: w.properties.alterationMutation || null,
+        repetitionMutation: w.properties.repetitionMutation || null,
+        figurativeMutation: w.properties.figurativeMutation || null,
+        qualifiedAssociation: w.properties.QualifiedAssociation || null,
+        genericAssociation: w.properties.GenericAssociation || null,
+        synonyms: w.properties.synonyms || null,
+        antonyms: w.properties.antonyms || null,
+        labels: labels,
+        outgoing: outgoingResult.records.map((r) => ({
+          type: r.get('relation'),
+          target: r.get('target')
+        })),
+        incoming: incomingResult.records.map((r) => ({
+          type: r.get('relation'),
+          source: r.get('source')
+        }))
+      }
     });
 
   } catch (error) {
